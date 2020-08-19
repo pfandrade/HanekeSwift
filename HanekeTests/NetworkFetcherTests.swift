@@ -47,8 +47,8 @@ class NetworkFetcherTests: XCTestCase {
         sut.fetch(failure: { _ in
             XCTFail("expected success")
             expectation.fulfill()
-        }) {
-            let result = $0 as UIImage
+        }) { value, _ in
+            let result = value as UIImage
             XCTAssertTrue(result.isEqualPixelByPixel(image))
             expectation.fulfill()
         }
@@ -94,7 +94,7 @@ class NetworkFetcherTests: XCTestCase {
             XCTAssertEqual($0!._code, HanekeGlobals.NetworkFetcher.ErrorCode.invalidData.rawValue)
             XCTAssertNotNil($0!.localizedDescription)
             expectation.fulfill()
-        }) { _ in
+        }) { _,_ in
             XCTFail("expected failure")
             expectation.fulfill()
         }
@@ -116,7 +116,7 @@ class NetworkFetcherTests: XCTestCase {
             XCTAssertEqual($0!._code, HanekeGlobals.NetworkFetcher.ErrorCode.missingData.rawValue)
             XCTAssertNotNil($0!.localizedDescription)
             expectation.fulfill()
-        }) { _ in
+        }) { _,_ in
             XCTFail("expected failure")
             expectation.fulfill()
         }
@@ -134,7 +134,7 @@ class NetworkFetcherTests: XCTestCase {
         })
         sut.fetch(failure: {_ in
             XCTFail("unexpected failure")
-        }) { _ in
+        }) { _,_ in
             XCTFail("unexpected success")
         }
         
@@ -167,8 +167,8 @@ class NetworkFetcherTests: XCTestCase {
         sut.fetch(failure: { _ in
             XCTFail("expected success")
             expectation.fulfill()
-            }) {
-                let result = $0 as UIImage
+            }) { value, _ in
+                let result = value as UIImage
                 XCTAssertTrue(result.isEqualPixelByPixel(image))
                 expectation.fulfill()
         }
@@ -190,7 +190,7 @@ class NetworkFetcherTests: XCTestCase {
             XCTAssertEqual($0!._code, HanekeGlobals.NetworkFetcher.ErrorCode.invalidStatusCode.rawValue)
             XCTAssertNotNil($0!.localizedDescription)
             expectation.fulfill()
-        }) { _ in
+        }) { _,_ in
             XCTFail("expected failure")
             expectation.fulfill()
         }

@@ -571,7 +571,7 @@ class MockFetcher<T : DataConvertible> : Fetcher<T> {
         super.init(key: key)
     }
     
-    override func fetch(failure fail : @escaping ((Error?) -> ()), success succeed : @escaping (T.Result) -> ()) {
+    override func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result, @escaping () -> Data) -> ()) {
         let error = errorWithCode(0, description: "test")
         fail(error)
     }

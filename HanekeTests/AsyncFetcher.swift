@@ -9,7 +9,7 @@
 import Foundation
 @testable import Haneke
 
-class AsyncFetcher<T : DataConvertible> : Fetcher<T> {
+class AsyncFetcher<T : DataConvertible&DataRepresentable> : Fetcher<T> where T.Result == T {
 
     let getValue : () -> T.Result
 
@@ -18,11 +18,12 @@ class AsyncFetcher<T : DataConvertible> : Fetcher<T> {
         super.init(key: key)
     }
 
-    override func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result) -> ()) {
+    open override func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result, @escaping  () -> Data) -> ()) {
         let value = getValue()
+        let dataGenerator = { () -> Data in value.asData() }
         DispatchQueue.global(qos: .default).async {
             DispatchQueue.main.async {
-                succeed(value)
+                succeed(value, dataGenerator)
             }
         }
     }

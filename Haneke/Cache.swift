@@ -33,7 +33,7 @@ extension HanekeGlobals {
     
 }
 
-open class Cache<T: DataConvertible> where T.Result == T, T : DataRepresentable {
+open class Cache<T: DataConvertible> where T.Result == T {
     
     let name: String
     
@@ -59,20 +59,6 @@ open class Cache<T: DataConvertible> where T.Result == T, T : DataRepresentable 
     deinit {
         let notifications = NotificationCenter.default
         notifications.removeObserver(memoryWarningObserver as Any, name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
-    }
-    
-    open func set(value: T, key: String, formatName: String = HanekeGlobals.Cache.OriginalFormatName, success succeed: ((T) -> ())? = nil) {
-        if let (format, memoryCache, diskCache) = self.formats[formatName] {
-            self.format(value: value, format: format) { formattedValue in
-                let wrapper = ObjectWrapper(value: formattedValue)
-                memoryCache?.setObject(wrapper, forKey: key as AnyObject)
-                // Value data is sent as @autoclosure to be executed in the disk cache queue.
-                diskCache.setData(self.dataFromValue(formattedValue, format: format), key: key)
-                succeed?(formattedValue)
-            }
-        } else {
-            assertionFailure("Can't set value before adding format")
-        }
     }
     
     @discardableResult open func fetch(key: String, formatName: String = HanekeGlobals.Cache.OriginalFormatName, failure fail : Fetch<T>.Failer? = nil, success succeed : Fetch<T>.Succeeder? = nil) -> Fetch<T> {
@@ -211,13 +197,6 @@ open class Cache<T: DataConvertible> where T.Result == T, T : DataRepresentable 
     
     // MARK: Private
     
-    func dataFromValue(_ value : T, format : Format<T>) -> Data? {
-        if let data = format.convertToData?(value) {
-            return data as Data
-        }
-        return value.asData()
-    }
-    
     fileprivate func fetchFromDiskCache(_ diskCache : DiskCache, key: String, memoryCache : NSCache<AnyObject, AnyObject>?, failure fail : ((Error?) -> ())?, success succeed : @escaping (T) -> ()) {
         diskCache.fetchData(key: key, failure: { error in
             if let block = fail {
@@ -248,8 +227,22 @@ open class Cache<T: DataConvertible> where T.Result == T, T : DataRepresentable 
     fileprivate func fetchAndSet(_ fetcher : Fetcher<T>, format : Format<T>, failure fail : ((Error?) -> ())?, success succeed : @escaping (T) -> ()) {
         fetcher.fetch(failure: { error in
             let _ = fail?(error)
-        }) { value in
-            self.set(value: value, key: fetcher.key, formatName: format.name, success: succeed)
+        }) { value, getData in
+            self.set(value: value, data: getData(), key: fetcher.key, formatName: format.name, success: succeed)
+        }
+    }
+    
+    open func set(value: T, data: @autoclosure @escaping () -> Data?, key: String, formatName: String = HanekeGlobals.Cache.OriginalFormatName, success succeed: ((T) -> ())? = nil) {
+        if let (format, memoryCache, diskCache) = self.formats[formatName] {
+            self.format(value: value, format: format) { formattedValue in
+                let wrapper = ObjectWrapper(value: formattedValue)
+                memoryCache?.setObject(wrapper, forKey: key as AnyObject)
+                // Value data is sent as @autoclosure to be executed in the disk cache queue.
+                diskCache.setData(data(), key: key)
+                succeed?(formattedValue)
+            }
+        } else {
+            assertionFailure("Can't set value before adding format")
         }
     }
     
@@ -297,10 +290,6 @@ open class Cache<T: DataConvertible> where T.Result == T, T : DataRepresentable 
     // MARK: Convenience fetch
     // Ideally we would put each of these in the respective fetcher file as a Cache extension. Unfortunately, this fails to link when using the framework in a project as of Xcode 6.1.
     
-    open func fetch(key: String, value getValue : @autoclosure @escaping () -> T.Result, formatName: String = HanekeGlobals.Cache.OriginalFormatName, success succeed : Fetch<T>.Succeeder? = nil) -> Fetch<T> {
-        let fetcher = SimpleFetcher<T>(key: key, value: getValue())
-        return self.fetch(fetcher: fetcher, formatName: formatName, success: succeed)
-    }
     
     open func fetch(path: String, formatName: String = HanekeGlobals.Cache.OriginalFormatName,  failure fail : Fetch<T>.Failer? = nil, success succeed : Fetch<T>.Succeeder? = nil) -> Fetch<T> {
         let fetcher = DiskFetcher<T>(path: path)
@@ -312,4 +301,35 @@ open class Cache<T: DataConvertible> where T.Result == T, T : DataRepresentable 
         return self.fetch(fetcher: fetcher, formatName: formatName, failure: fail, success: succeed)
     }
     
+}
+
+extension Cache {
+    fileprivate func dataFromValue(_ value : T, format : Format<T>) -> Data? {
+        return nil
+    }
+}
+
+extension Cache where T: DataRepresentable {
+
+    fileprivate func dataFromValue(_ value : T, format : Format<T>) -> Data? {
+        if let data = format.convertToData?(value) {
+            return data as Data
+        }
+        return value.asData()
+    }
+    
+    open func set(value: T, key: String, formatName: String = HanekeGlobals.Cache.OriginalFormatName, success succeed: ((T) -> ())? = nil) {
+        if let (format, _, _) = self.formats[formatName] {
+            self.format(value: value, format: format) { formattedValue in
+                self.set(value: value, data: self.dataFromValue(formattedValue, format: format), key: key, formatName: formatName, success: succeed)
+            }
+        } else {
+            assertionFailure("Can't set value before adding format")
+        }
+    }
+    
+    open func fetch(key: String, value getValue : @autoclosure @escaping () -> T.Result, formatName: String = HanekeGlobals.Cache.OriginalFormatName, success succeed : Fetch<T>.Succeeder? = nil) -> Fetch<T> {
+        let fetcher = SimpleFetcher<T>(key: key, value: getValue())
+        return self.fetch(fetcher: fetcher, formatName: formatName, success: succeed)
+    }
 }

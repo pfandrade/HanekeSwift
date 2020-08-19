@@ -39,8 +39,8 @@ class DiskFetcherTests: DiskTestCase {
         sut.fetch(failure: { _ in
             XCTFail("Expected to succeed")
             expectation.fulfill()
-        }) {
-            let result = $0 as UIImage
+        }) { value, _ in
+            let result = value as UIImage
             XCTAssertTrue(result.isEqualPixelByPixel(image))
             expectation.fulfill()
         }
@@ -60,7 +60,7 @@ class DiskFetcherTests: DiskTestCase {
             XCTAssertEqual(error.code, NSFileReadNoSuchFileError)
             XCTAssertNotNil(error.localizedDescription)
             expectation.fulfill()
-        }) { _ in
+        }) { _, _  in
             XCTFail("Expected to fail")
             expectation.fulfill()
         }
@@ -84,7 +84,7 @@ class DiskFetcherTests: DiskTestCase {
             XCTAssertEqual(error.code, HanekeGlobals.DiskFetcher.ErrorCode.invalidData.rawValue)
             XCTAssertNotNil(error.localizedDescription)
             expectation.fulfill()
-        }) { _ in
+        }) { _, _ in
             XCTFail("Expected to fail")
             expectation.fulfill()
         }
@@ -102,7 +102,7 @@ class DiskFetcherTests: DiskTestCase {
                 return
             }
             XCTFail("Unexpected failure with error \(error)")
-        }) { _ in
+        }) { _, _ in
             XCTFail("Unexpected success")
         }
         

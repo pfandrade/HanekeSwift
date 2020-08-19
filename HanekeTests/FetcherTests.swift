@@ -30,8 +30,8 @@ class FetcherTests: XCTestCase {
         
         fetcher.fetch(failure: { _ in
             XCTFail("expected success")
-        }) {
-            XCTAssertEqual($0, image)
+        }) { value, _ in
+            XCTAssertEqual(value, image)
             expectation.fulfill()
         }
         

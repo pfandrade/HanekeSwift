@@ -42,7 +42,7 @@ open class NetworkFetcher<T : DataConvertible> : Fetcher<T> {
     
     // MARK: Fetcher
     
-    open override func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result) -> ()) {
+    open override func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result, @escaping () -> Data) -> ()){
         self.cancelled = false
         self.task = self.session.dataTask(with: self.URL) {[weak self] (data, response, error) -> Void in
             if let strongSelf = self {
@@ -59,7 +59,7 @@ open class NetworkFetcher<T : DataConvertible> : Fetcher<T> {
     
     // MARK: Private
     
-    fileprivate func onReceive(data: Data!, response: URLResponse!, error: Error!, failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result) -> ()) {
+    fileprivate func onReceive(data: Data!, response: URLResponse!, error: Error!, failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result, @escaping () -> Data) -> ()) {
 
         if cancelled { return }
         
@@ -93,7 +93,7 @@ open class NetworkFetcher<T : DataConvertible> : Fetcher<T> {
             return
         }
 
-        DispatchQueue.main.async { succeed(value) }
+        DispatchQueue.main.async { succeed(value, { data }) }
 
     }
     

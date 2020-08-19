@@ -17,23 +17,24 @@ open class Fetcher<T : DataConvertible> {
         self.key = key
     }
     
-    open func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result) -> ()) {}
+    open func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result, @escaping () -> Data) -> ()) {}
     
     open func cancelFetch() {}
 }
 
-class SimpleFetcher<T : DataConvertible> : Fetcher<T> {
+class SimpleFetcher<T : DataConvertible&DataRepresentable> : Fetcher<T> where T.Result == T {
     
-    let getValue : () -> T.Result
+    let getValue : () -> T
     
-    init(key: String, value getValue : @autoclosure @escaping () -> T.Result) {
+    init(key: String, value getValue : @autoclosure @escaping () -> T) {
         self.getValue = getValue
         super.init(key: key)
     }
     
-    override func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result) -> ()) {
+    override func fetch(failure fail: @escaping ((Error?) -> ()), success succeed: @escaping (T.Result, @escaping () -> Data) -> ()) {
         let value = getValue()
-        succeed(value)
+        let dataGenerator = { () -> Data in value.asData() }
+        succeed(value, dataGenerator)
     }
     
     override func cancelFetch() {}
